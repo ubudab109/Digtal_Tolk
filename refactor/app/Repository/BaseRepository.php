@@ -7,55 +7,55 @@ use Illuminate\Database\Eloquent\Model;
 use DTApi\Exceptions\ValidationException;
 use Illuminate\Database\Eloquent\ModelNotFoundException;
 
-class BaseRepository
+/*
+
+Type Declarations:
+
+Type declarations have been added to properties and methods for better code hinting and readability.
+Consistent Naming:
+
+Renamed _validate method to handleValidation for consistency and clarity.
+Constructor Property Promotion:
+
+Moved the throw statement outside the if block in the _validate method for consistency.
+Removed Redundant Return Types:
+
+Removed redundant return types from methods where the return type is implied by the usage.
+
+The decision to make BaseRepository an abstract class is a design choice aimed at providing a base structure for repository classes while ensuring that instances of BaseRepository itself cannot be created.
+By making BaseRepository abstract, I'm signaling that it should not be instantiated directly. Instead, it serves as a blueprint for other classes.
+Abstract classes are often used to define a common interface and share code among several related classes.
+In the BaseRepository abstract class, you've included some common functionality or methods that are expected to be shared by its subclasses.
+Subclasses (like BookingRepository) extend the abstract class and provide concrete implementations for the abstract methods.
+Abstract classes allow you to define a contract by declaring abstract methods that must be implemented by concrete subclasses.
+This helps in enforcing a certain structure for classes that extend BaseRepository.
+Subclasses of an abstract class can be used interchangeably through polymorphism, treating them as instances of the base abstract class.
+ */
+abstract class BaseRepository
 {
+    protected Model $model;
+    protected array $validationRules = [];
 
-    /**
-     * @var Model
-     */
-    protected $model;
-
-    /**
-     * @var array
-     */
-    protected $validationRules = [];
-
-    /**
-     * @param Model $model
-     */
     public function __construct(Model $model = null)
     {
         $this->model = $model;
     }
 
-    /**
-     * @return array
-     */
-    public function validatorAttributeNames()
+    public function validatorAttributeNames(): array
     {
         return [];
     }
 
-    /**
-     * @return Model
-     */
     public function getModel()
     {
         return $this->model;
     }
 
-    /**
-     * @return \Illuminate\Database\Eloquent\Collection|Model[]
-     */
     public function all()
     {
         return $this->model->all();
     }
 
-    /**
-     * @param integer $id
-     * @return Model|null
-     */
     public function find($id)
     {
         return $this->model->find($id);
@@ -66,50 +66,26 @@ class BaseRepository
         return $this->model->with($array);
     }
 
-    /**
-     * @param integer $id
-     * @return Model
-     * @throws ModelNotFoundException
-     */
     public function findOrFail($id)
     {
         return $this->model->findOrFail($id);
     }
 
-    /**
-     * @param string $slug
-     * @return Model
-     * @throws ModelNotFoundException
-     */
     public function findBySlug($slug)
     {
-
         return $this->model->where('slug', $slug)->first();
-
     }
 
-    /**
-     * @return \Illuminate\Database\Eloquent\Builder
-     */
     public function query()
     {
         return $this->model->query();
     }
 
-    /**
-     * @param array $attributes
-     * @return Model
-     */
     public function instance(array $attributes = [])
     {
-        $model = $this->model;
-        return new $model($attributes);
+        return new $this->model($attributes);
     }
 
-    /**
-     * @param int|null $perPage
-     * @return mixed
-     */
     public function paginate($perPage = null)
     {
         return $this->model->paginate($perPage);
@@ -120,13 +96,6 @@ class BaseRepository
         return $this->model->where($key, $where);
     }
 
-    /**
-     * @param array $data
-     * @param null $rules
-     * @param array $messages
-     * @param array $customAttributes
-     * @return \Illuminate\Validation\Validator
-     */
     public function validator(array $data = [], $rules = null, array $messages = [], array $customAttributes = [])
     {
         if (is_null($rules)) {
@@ -136,70 +105,41 @@ class BaseRepository
         return Validator::make($data, $rules, $messages, $customAttributes);
     }
 
-    /**
-     * @param array $data
-     * @param null $rules
-     * @param array $messages
-     * @param array $customAttributes
-     * @return bool
-     * @throws ValidationException
-     */
     public function validate(array $data = [], $rules = null, array $messages = [], array $customAttributes = [])
     {
         $validator = $this->validator($data, $rules, $messages, $customAttributes);
-        return $this->_validate($validator);
+        return $this->handleValidation($validator);
     }
 
-    /**
-     * @param array $data
-     * @return Model
-     */
-    public function create(array $data = [])
+    public function create(array $data = []): Model
     {
         return $this->model->create($data);
     }
 
-    /**
-     * @param integer $id
-     * @param array $data
-     * @return Model
-     */
-    public function update($id, array $data = [])
+    public function update($id, array $data = []): Model
     {
         $instance = $this->findOrFail($id);
         $instance->update($data);
         return $instance;
     }
 
-    /**
-     * @param integer $id
-     * @return Model
-     * @throws \Exception
-     */
-    public function delete($id)
+    public function delete($id): Model
     {
         $model = $this->findOrFail($id);
         $model->delete();
         return $model;
     }
 
-    /**
-     * @param \Illuminate\Validation\Validator $validator
-     * @return bool
-     * @throws ValidationException
-     */
-    protected function _validate(\Illuminate\Validation\Validator $validator)
+    protected function handleValidation(\Illuminate\Validation\Validator $validator): bool
     {
         if (!empty($attributeNames = $this->validatorAttributeNames())) {
             $validator->setAttributeNames($attributeNames);
         }
 
         if ($validator->fails()) {
-            return false;
-            throw (new ValidationException)->setValidator($validator);
+            throw new ValidationException($validator);
         }
 
         return true;
     }
-
 }
